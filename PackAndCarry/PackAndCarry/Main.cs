@@ -601,9 +601,13 @@ namespace PackAndCarry
         #region Events
         private void BasicInventory_OnItemDraggedOut(BasicInventory sender, BasicInventoryItem item, int itemIndex)
         {
-            if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
+            // Check if this is a custom item first before doing stuff with it
+            if (!item.Tags.ContainsKey("IS_CUSTOM_ITEM"))
             {
-                DropItem(sender, item);
+                if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
+                {
+                    DropItem(sender, item);
+                }
             }
 
             // Raise API "PAC_ON_ITEM_DRAGGED_OUT" event for subscriber
@@ -620,11 +624,15 @@ namespace PackAndCarry
         }
         private void BasicInventory_OnPopupItemClick(BasicInventory sender, BasicInventoryItem item, string popupItemName)
         {
-            if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
+            // Check if this is a custom item first before doing stuff with it
+            if (!item.Tags.ContainsKey("IS_CUSTOM_ITEM"))
             {
-                if (popupItemName == "Drop")
+                if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
                 {
-                    DropItem(sender, item);
+                    if (popupItemName == "Drop")
+                    {
+                        DropItem(sender, item);
+                    }
                 }
             }
 
@@ -634,11 +642,15 @@ namespace PackAndCarry
         }
         private void BasicInventory_OnItemClick(BasicInventory sender, BasicInventoryItem item, int itemIndex)
         {
-            if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
+            // Check if this is a custom item first before doing stuff with it
+            if (!item.Tags.ContainsKey("IS_CUSTOM_ITEM"))
             {
-                int weaponType = Convert.ToInt32(item.Tags["WeaponType"]);
-                lastPlayerWeapon = weaponType;
-                SET_CURRENT_CHAR_WEAPON(playerPedHandle, weaponType, false);
+                if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
+                {
+                    int weaponType = Convert.ToInt32(item.Tags["WeaponType"]);
+                    lastPlayerWeapon = weaponType;
+                    SET_CURRENT_CHAR_WEAPON(playerPedHandle, weaponType, false);
+                }
             }
 
             // Raise API "PAC_ON_ITEM_CLICKED" event for subscriber
@@ -657,6 +669,16 @@ namespace PackAndCarry
                 for (int i = 0; i < leftBehindItems.Count; i++)
                 {
                     BasicInventoryItem item = leftBehindItems[i];
+
+                    // Check if this is a custom item first before doing stuff with it
+                    if (item.Tags.ContainsKey("IS_CUSTOM_ITEM"))
+                    {
+                        // Raise API "PAC_ON_ITEM_BEING_LEFT_BEHIND" event for subscriber
+                        if (item.Tags.ContainsKey("WANTS_ON_ITEM_BEING_LEFT_BEHIND_EVENTS"))
+                            BeginInvokeItemEventForSubscriber(item, "WANTS_ON_ITEM_BEING_LEFT_BEHIND_EVENTS", "PAC_ON_ITEM_BEING_LEFT_BEHIND", new object[] { target.ID, item.ID });
+
+                        continue;
+                    }
 
                     if (item.Tags.ContainsKey("IS_GAME_WEAPON"))
                         DropItem(target, item, i * GENERATE_RANDOM_FLOAT_IN_RANGE(0.10f, 0.15f));
@@ -781,6 +803,42 @@ namespace PackAndCarry
 
                             return inventory.GetAmountOfFreeSlots();
                         }
+                    case "GET_FOCUSED_ITEM_ID":
+                        {
+                            if (args == null)
+                                return Guid.Empty;
+
+                            Guid inventoryId = (Guid)args[0];
+
+                            // Find target inventory
+                            BasicInventory inventory = FindInventory(inventoryId);
+
+                            if (inventory == null)
+                                return Guid.Empty;
+
+                            BasicInventoryItem item = inventory.GetFocusedItem();
+
+                            if (item == null)
+                                return Guid.Empty;
+
+                            return item.ID;
+                        }
+
+                    case "IS_INVENTORY_VISIBLE":
+                        {
+                            if (args == null)
+                                return false;
+
+                            Guid inventoryId = (Guid)args[0];
+
+                            // Find target inventory
+                            BasicInventory inventory = FindInventory(inventoryId);
+
+                            if (inventory == null)
+                                return false;
+
+                            return inventory.IsVisible;
+                        }
 
                     // Item
                     case "ADD_NEW_ITEM_TO_INVENTORY":
@@ -824,7 +882,6 @@ namespace PackAndCarry
                             }
 
                             item.Tags.Add("IS_CUSTOM_ITEM", fromScript.ID);
-                            //item.Tags.Add("OWNER_SCRIPT_ID", fromScript.ID);
 
                             return item.ID;
                         }
@@ -1252,6 +1309,26 @@ namespace PackAndCarry
                             return UnsubscribeFromItemEvent(inventoryId, itemId, "WANTS_ON_POPUP_ITEM_CLICK_EVENTS");
                         }
 
+                    case "SUBSCRIBE_TO_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM":
+                        {
+                            if (args == null)
+                                return false;
+
+                            Guid inventoryId = (Guid)args[0];
+                            Guid itemId = (Guid)args[1];
+
+                            return SubscribeToItemEvent(inventoryId, itemId, fromScript.ID, "WANTS_ON_ITEM_BEING_LEFT_BEHIND_EVENTS");
+                        }
+                    case "UNSUBSCRIBE_FROM_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM":
+                        {
+                            if (args == null)
+                                return false;
+
+                            Guid inventoryId = (Guid)args[0];
+                            Guid itemId = (Guid)args[1];
+
+                            return UnsubscribeFromItemEvent(inventoryId, itemId, "WANTS_ON_ITEM_BEING_LEFT_BEHIND_EVENTS");
+                        }
                 }
             }
             catch (Exception ex)
@@ -1277,7 +1354,7 @@ namespace PackAndCarry
         {
             if (ModSettings.DisableInMP && IVNetwork.IsNetworkGameRunning())
                 return;
-            
+
             // Process queue
             while (mainThreadQueue.Count != 0)
                 mainThreadQueue.Dequeue()?.Invoke();

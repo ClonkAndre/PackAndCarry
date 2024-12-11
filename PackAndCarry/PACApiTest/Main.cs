@@ -44,7 +44,6 @@ namespace PACApiTest
             ScriptCommandReceived += Main_ScriptCommandReceived;
             OnFirstD3D9Frame += Main_OnFirstD3D9Frame;
             OnImGuiRendering += Main_OnImGuiRendering;
-            Tick += Main_Tick;
         }
         #endregion
 
@@ -89,6 +88,14 @@ namespace PACApiTest
                         IVGame.Console.PrintWarningEx("Received PAC_ON_POPUP_ITEM_CLICKED script command from inventory {0} for item {1}. Clicked on {2}", inventoryId, itemId, popupItemName);
                     }
                     break;
+                case "PAC_ON_ITEM_BEING_LEFT_BEHIND":
+                    {
+                        Guid inventoryId = (Guid)args[0];
+                        Guid itemId = (Guid)args[1];
+
+                        IVGame.Console.PrintWarningEx("Received PAC_ON_ITEM_BEING_LEFT_BEHIND script command from inventory {0} for item {1}.", inventoryId, itemId);
+                    }
+                    break;
             }
 
             return null;
@@ -120,6 +127,7 @@ namespace PACApiTest
             if (PlayerInventoryID == Guid.Empty)
             {
                 ImGuiIV.TextColored(Color.Yellow, "Get the player inventory id first to be able to interact with it");
+                ImGuiIV.End();
                 return;
             }
 
@@ -159,7 +167,8 @@ namespace PACApiTest
 
             if (addedItemID == Guid.Empty)
             {
-                ImGuiIV.TextColored(Color.Yellow, "Add a new item to the player inventory first to be ablet to interact with it");
+                ImGuiIV.TextColored(Color.Yellow, "Add a new item to the player inventory first to be able to interact with it");
+                ImGuiIV.End();
                 return;
             }
 
@@ -356,12 +365,24 @@ namespace PACApiTest
                 }
             }
 
+            ImGuiIV.Spacing(2);
+
+            if (ImGuiIV.Button("SUBSCRIBE_TO_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM"))
+            {
+                if (SendScriptCommand("PackAndCarry", "SUBSCRIBE_TO_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM", new object[] { PlayerInventoryID, addedItemID }, out object result))
+                {
+                    IVGame.Console.PrintEx("SUBSCRIBE_TO_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM result: {0}", Convert.ToBoolean(result));
+                }
+            }
+            if (ImGuiIV.Button("UNSUBSCRIBE_FROM_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM"))
+            {
+                if (SendScriptCommand("PackAndCarry", "UNSUBSCRIBE_FROM_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM", new object[] { PlayerInventoryID, addedItemID }, out object result))
+                {
+                    IVGame.Console.PrintEx("UNSUBSCRIBE_FROM_ON_ITEM_BEING_LEFT_BEHIND_EVENT_FOR_ITEM result: {0}", Convert.ToBoolean(result));
+                }
+            }
+
             ImGuiIV.End();
-        }
-
-        private void Main_Tick(object sender, EventArgs e)
-        {
-
         }
 
     }
