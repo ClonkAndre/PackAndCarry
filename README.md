@@ -9,8 +9,9 @@ Pack & Carry is a mod which adds a custom, more advanced inventory to GTA IV usi
 - **Modder-Friendly Integration**: Other mods can add custom items to the inventory by using the script commands of this mod.  
 
 ## Requirements
-- [IV-SDK .NET](https://github.com/ClonkAndre/IV-SDK-DotNet)
-- [ClonksCodingLib.GTAIV](https://github.com/ClonkAndre/ClonksCodingLib.GTAIV)
+- [IV-SDK .NET](https://github.com/ClonkAndre/IV-SDK-DotNet)  
+- [ClonksCodingLib.GTAIV](https://github.com/ClonkAndre/ClonksCodingLib.GTAIV)  
+- [CustomInventoryIV](https://github.com/ClonkAndre/CustomInventoryIV)
 
 ## Credits
 [HD Weapon icons by RollY](https://gamebanana.com/mods/27174)
